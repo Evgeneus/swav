@@ -12,11 +12,13 @@ import cv2
 import numpy as np
 import torchvision.datasets as datasets
 import torchvision.transforms as transforms
+from PIL import Image
 
 logger = getLogger()
 
 
-class MultiCropDataset(datasets.ImageFolder):
+# class MultiCropDataset(datasets.ImageFolder):
+class MultiCropDataset(datasets.CIFAR10):
     def __init__(
         self,
         data_path,
@@ -27,7 +29,8 @@ class MultiCropDataset(datasets.ImageFolder):
         size_dataset=-1,
         return_index=False,
     ):
-        super(MultiCropDataset, self).__init__(data_path)
+        # super(MultiCropDataset, self).__init__(data_path)
+        super(MultiCropDataset, self).__init__(root="../data/", train=True, download=True)
         assert len(size_crops) == len(nmb_crops)
         assert len(min_scale_crops) == len(nmb_crops)
         assert len(max_scale_crops) == len(nmb_crops)
@@ -54,8 +57,11 @@ class MultiCropDataset(datasets.ImageFolder):
         self.trans = trans
 
     def __getitem__(self, index):
-        path, _ = self.samples[index]
-        image = self.loader(path)
+        # path, _ = self.samples[index]
+        # image = self.loader(path)
+        image = self.data[index]
+        image = Image.fromarray(image)
+
         multi_crops = list(map(lambda trans: trans(image), self.trans))
         if self.return_index:
             return index, multi_crops

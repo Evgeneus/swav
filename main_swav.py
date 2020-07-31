@@ -39,11 +39,11 @@ parser = argparse.ArgumentParser(description="Implementation of SwAV")
 #########################
 #### data parameters ####
 #########################
-parser.add_argument("--data_path", type=str, default="/path/to/imagenet",
+parser.add_argument("--data_path", type=str, default="../data/cifar-10-batches-py",
                     help="path to dataset repository")
 parser.add_argument("--nmb_crops", type=int, default=[2], nargs="+",
                     help="list of number of crops (example: [2, 6])")
-parser.add_argument("--size_crops", type=int, default=[224], nargs="+",
+parser.add_argument("--size_crops", type=int, default=[32], nargs="+",
                     help="crops resolutions (example: [224, 96])")
 parser.add_argument("--min_scale_crops", type=float, default=[0.14], nargs="+",
                     help="argument in RandomResizedCrop (example: [0.14, 0.05])")
@@ -150,6 +150,12 @@ def main():
         output_dim=args.feat_dim,
         nmb_prototypes=args.nmb_prototypes,
     )
+    def update_model_cifar10(base_model):
+        base_model.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        base_model.maxpool = nn.Identity()
+        return base_model
+    model = update_model_cifar10(model)
+
     # synchronize batch norm layers
     if args.sync_bn == "pytorch":
         model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
