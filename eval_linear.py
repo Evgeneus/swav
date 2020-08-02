@@ -20,7 +20,8 @@ import torch.optim
 import torch.utils.data as data
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
-from apex.parallel.LARC import LARC
+from src.multicropdataset import MultiCropDataset
+# from apex.parallel.LARC import LARC
 
 from src.utils import (
     bool_flag,
@@ -43,15 +44,15 @@ parser = argparse.ArgumentParser(description="Evaluate models: Linear classifica
 parser.add_argument("--dump_path", type=str, default=".",
                     help="experiment dump path for checkpoints and log")
 parser.add_argument("--seed", type=int, default=31, help="seed")
-parser.add_argument("--data_path", type=str, default="/path/to/imagenet",
+parser.add_argument("--data_path", type=str, default="../data/cifar-10-batches-py",
                     help="path to dataset repository")
-parser.add_argument("--workers", default=10, type=int,
+parser.add_argument("--workers", default=8, type=int,
                     help="number of data loading workers")
 
 #########################
 #### model parameters ###
 #########################
-parser.add_argument("--arch", default="resnet50", type=str, help="convnet architecture")
+parser.add_argument("--arch", default="resnet18", type=str, help="convnet architecture")
 parser.add_argument("--pretrained", default="", type=str, help="path to pretrained weights")
 parser.add_argument("--global_pooling", default=True, type=bool_flag,
                     help="if True, we use the resnet50 global average pooling")
@@ -100,20 +101,23 @@ def main():
     )
 
     # build data
-    train_dataset = datasets.ImageFolder(os.path.join(args.data_path, "train"))
-    val_dataset = datasets.ImageFolder(os.path.join(args.data_path, "val"))
+    train_dataset = datasets.CIFAR10(root="../data/", train=True, download=True)
+    val_dataset = datasets.CIFAR10(root="../data/", train=False, download=True)
+    # train_dataset = datasets.ImageFolder(os.path.join(args.data_path, "train"))
+    # val_dataset = datasets.ImageFolder(os.path.join(args.data_path, "val"))
+
     tr_normalize = transforms.Normalize(
         mean=[0.485, 0.456, 0.406], std=[0.228, 0.224, 0.225]
     )
     train_dataset.transform = transforms.Compose([
-        transforms.RandomResizedCrop(224),
+        transforms.RandomResizedCrop(32),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         tr_normalize,
     ])
     val_dataset.transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
+        transforms.Resize(32),
+        # transforms.CenterCrop(224),
         transforms.ToTensor(),
         tr_normalize,
     ])
@@ -135,7 +139,8 @@ def main():
 
     # build model
     model = resnet_models.__dict__[args.arch](output_dim=0, eval_mode=True)
-    linear_classifier = RegLog(1000, args.arch, args.global_pooling, args.use_bn)
+    num_classes = 10
+    linear_classifier = RegLog(num_classes, args.arch, args.global_pooling, args.use_bn)
 
     # convert batch norm layers (if any)
     linear_classifier = nn.SyncBatchNorm.convert_sync_batchnorm(linear_classifier)
@@ -235,6 +240,8 @@ class RegLog(nn.Module):
         super(RegLog, self).__init__()
         self.bn = None
         if global_avg:
+            if arch == "resnet18":
+                s = 512
             if arch == "resnet50":
                 s = 2048
             elif arch == "resnet50w2":
