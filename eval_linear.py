@@ -242,7 +242,7 @@ class RegLog(nn.Module):
         if global_avg:
             if arch == "resnet18":
                 s = 512
-            if arch == "resnet50":
+            elif arch == "resnet50":
                 s = 2048
             elif arch == "resnet50w2":
                 s = 4096
