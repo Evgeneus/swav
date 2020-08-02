@@ -138,7 +138,13 @@ def main():
     logger.info("Building data done")
 
     # build model
+    def update_model_cifar10(base_model):
+        base_model.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        base_model.maxpool = nn.Identity()
+        return base_model
     model = resnet_models.__dict__[args.arch](output_dim=0, eval_mode=True)
+    model = update_model_cifar10(model)
+
     num_classes = 10
     linear_classifier = RegLog(num_classes, args.arch, args.global_pooling, args.use_bn)
 
